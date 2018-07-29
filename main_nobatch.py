@@ -1,20 +1,12 @@
 import argparse
 import data.config as config
 from data.vocab import Data
-import model_joint.lstm as lstm
-import model_joint.lstm_e as lstm_e
-import model_joint.calc_loss as calc_loss
 
 import model_att.context_att_b as context_att_b
-import model_att.vanilla_att_b_new as vanilla_att_b_new
-import model_att.vanilla_att_b_try as vanilla_att_b_try
 import model_att.context_att_gate_b as context_att_gate_b
 import model_att.bilstm as bilstm
 import model_att.treelstm as treelstm
-import model_att.DL4MT as DL4MT
 
-import train_att
-import train_tree
 import train_tree_nobatch
 
 import torch
@@ -109,25 +101,15 @@ if __name__ == '__main__':
         # model_att = context_att.Context_att(config, data)
         model_att = context_att_b.Context_att(config, data)
     elif args.model == 'vanilla':
-        # model_att = vanilla_att.Vanilla_att(config, data)
-        # model_att = vanilla_att_b_new.Vanilla_att(config, data)
-        # model_att = vanilla_att_b_try.Vanilla_att(config, data)
-        # model_e = lstm_e.LSTM(config, data)
-        # add_layer = calc_loss.Calc_loss(config, data)
         model_att = bilstm.LSTM_att(config, data)
     elif args.model == 'context_att_gate':
         model_att = context_att_gate_b.Context_att_gate(config, data)
     elif args.model == 'treelstm':
-        # model_att = treelstm.BatchChildSumTreeLSTM(config, data)
-        model_att = DL4MT.Encoder(config, data)
+        model_att = treelstm.ChildSumTreeLSTM(config, data)
 
     # print('test building model time: ', time.time() - test_time)
 
     if data.use_cuda: model_att = model_att.cuda()
 
-    # train_att.train_att(train_insts, train_insts_index, dev_insts, dev_insts_index, test_insts, test_insts_index, model_att, config, data)
-    # train_tree.train(train_insts, train_insts_index, dev_insts, dev_insts_index, test_insts, test_insts_index, model_att, config, data)
-
-    # train_tree.train(train_dataset, dev_dataset, test_dataset, model_att, config, data)
     train_tree_nobatch.train_att(train_insts, train_insts_index, dev_insts, dev_insts_index, test_insts, test_insts_index, model_att, config, data)
 

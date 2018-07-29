@@ -9,6 +9,7 @@ class Tree(object):
         self.right_num = 0
         self._depth = -1
         self.order = []
+        self.state = [0,0]
 
     def add_left(self, child):
         """

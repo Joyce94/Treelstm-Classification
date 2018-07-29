@@ -1,12 +1,9 @@
-
 import torch
 import torch.nn as nn
 import time
 import random
 import numpy as np
 import data.utils as utils
-import model_joint.evaluation as evaluation
-import data.vocab as vocab
 import torch.nn.functional as F
 from calc_loss import FocalLoss
 
@@ -44,53 +41,23 @@ def train_att(train_insts, train_insts_index, dev_insts, dev_insts_index, test_i
             fea_v, label_v, pos_v, parse_v, rel_v, mask_v, length_v, target_v, start_v, end_v = utils.patch_var(train_buckets[index], batch_length.tolist(), train_category_raw[index], train_target_start[index], train_target_end[index], params)
             model_att.zero_grad()
 
-            # if mask_v.size(0) != config.train_batch_size:
-            #     model.hidden = model.init_hidden(mask_v.size(0), config.lstm_layers)
-            # else:
-            #     model.hidden = model.init_hidden(config.train_batch_size, config.lstm_layers)
-            # if mask_v.size(0) != config.train_batch_size:
-            #     model_att.hidden = model_att.init_hidden(mask_v.size(0), config.lstm_layers)
-            # else:
-            #     model_att.hidden = model_att.init_hidden(config.train_batch_size, config.lstm_layers)
-
-            logit = model_att.forward(fea_v, parse_v, rel_v, label_v, pos_v, batch_length.tolist(), start_v, end_v, mask_v)
-            loss_e = F.cross_entropy(logit, target_v)
-            # loss_e = fl(logit, target_v)
-            ##### logit: variable(batch_size, category_num)
+            out, loss_e = model_att.forward(fea_v, parse_v, rel_v, label_v, pos_v, batch_length.tolist(), start_v, end_v, mask_v)
 
             loss_e.backward()
             optimizer_att.step()
             epoch_loss_e += to_scalar(loss_e)
 
-            pre = to_scalar(torch.max(logit, dim=1)[1])
-            tar = to_scalar(target_v)
+            # pre = to_scalar(torch.max(out, dim=1)[1])
+            # tar = to_scalar(target_v)
+            #
+            # if pre == tar:
+            #     correct += 1
+            # total += 1
+            # print('sentence is {}, loss is {}'.format(index, to_scalar(loss_e)))
 
-            if pre == tar:
-                correct += 1
-            total += 1
-            print('sentence is {}, loss is {}'.format(index, to_scalar(loss_e)))
-            # lstm_out, lstm_classifier = model.forward(fea_v, batch_length.tolist())
-            # ##### lstm_out: (seq_length, batch_size, label_num)
-            # ##### label_v: (batch_size, seq_length)
-            # loss_c = add_layer.forward_seventh_c(lstm_classifier, lstm_exp_for_classifier, label_v, mask_v, target_v, train_labels_raw[index], params)
-            # loss_c.backward()
-            # # nn.utils.clip_grad_norm(model.parameters(), config.clip_grad)
-            # optimizer.step()
-            # epoch_loss_c += to_scalar(loss_c)
         # print('\nepoch is {}, average loss_c is {} '.format(epoch, (epoch_loss_c / config.train_batch_size)))
         print('\nepoch is {}, average loss_e is {}, train_accuracy is {} '.format(epoch, (epoch_loss_e / (config.train_batch_size * len(train_buckets))), (correct / total)))
-        # update lr
-        # adjust_learning_rate(optimizer, config.learning_rate / (1 + (epoch + 1) * config.decay))
-        # print('Dev...')
-        #
-        # dev_micro, dev_macro = eval_att(dev_insts, dev_insts_index, model_att, config, params)
-        # if dev_micro > best_micro_f1:
-        #     best_micro_f1 = dev_micro
-        #     # print('\nTest...')
-        #     # test_acc = eval_att(test_insts, test_insts_index, model_att, config, params)
-        # if dev_macro > best_macro_f1:
-        #     best_macro_f1 = dev_macro
-        # print('now, best micro fscore is {}, best macro fscore is {}'.format(best_micro_f1, best_macro_f1))
+
         print('Dev...')
         dev_micro, dev_macro = eval_att_nobatch(dev_insts, dev_insts_index, model_att, config, params)
         if dev_micro > best_micro_f1:
@@ -118,16 +85,7 @@ def eval_att_nobatch(insts, insts_index, model, config, params):
         start_v = start_v.squeeze(0)
         end_v = end_v.squeeze(0)
 
-        # if mask_v.size(0) != config.test_batch_size:
-        #     model.hidden = model.init_hidden(mask_v.size(0), config.lstm_layers)
-        # else:
-        #     model.hidden = model.init_hidden(config.test_batch_size, config.lstm_layers)
-        # if mask_v.size(0) != config.test_batch_size:
-        #     model_e.hidden = model_e.init_hidden(mask_v.size(0), config.lstm_layers)
-        # else:
-        #     model_e.hidden = model_e.init_hidden(config.test_batch_size, config.lstm_layers)
-        # fea_v, parse_v, rel_v, label_v, pos_v, batch_length.tolist(), start_v, end_v, mask_v
-        logit = model.forward(fea_v, parse_v, rel_v, label_v, pos_v, batch_length.tolist(), start_v, end_v, mask_v)
+        logit, _ = model.forward(fea_v, parse_v, rel_v, label_v, pos_v, batch_length.tolist(), start_v, end_v, mask_v)
         logit_total.append(logit)
         target_total.append(target_v)
     logit_total = torch.cat(logit_total, 0)
